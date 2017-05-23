@@ -115,7 +115,8 @@ class DownloadFromSqlView(PermissionRequiredMixin, View):
 
     def post(self, request, *args, **kwargs):
         sql = request.POST.get('sql')
-        query = Query(sql=sql, title='')
+        connection = request.POST.get('connection', 'default')
+        query = Query(sql=sql, connection=connection, title='')
         ql = query.log(request.user)
         query.title = 'Playground - %s' % ql.id
         return _export(request, query)
@@ -146,13 +147,19 @@ class EmailCsvQueryView(PermissionRequiredMixin, View):
 class SchemaView(PermissionRequiredMixin, View):
     permission_required = 'change_permission'
 
+    def __init__(self):
+        super(SchemaView, self).__init__()
+        self.connection = None
+
     @method_decorator(xframe_options_sameorigin)
     def dispatch(self, *args, **kwargs):
+        self.connection = kwargs.pop('connection', 'default')
         return super(SchemaView, self).dispatch(*args, **kwargs)
 
     def get(self, request, *args, **kwargs):
-        return render_to_response('explorer/schema.html',
-                                  {'schema': schema_info(get_connection())})
+        return render_to_response('explorer/schema.html', {
+            'schema': schema_info(get_connection(self.connection))
+        })
 
 
 @require_POST
@@ -272,33 +279,43 @@ class PlayQueryView(PermissionRequiredMixin, ExplorerContextMixin, View):
 
         if url_get_log_id(request):
             log = get_object_or_404(QueryLog, pk=url_get_log_id(request))
-            query = Query(sql=log.sql, title="Playground")
+            query = Query(sql=log.sql, connection=log.connection, title="Playground")
             return self.render_with_sql(request, query)
 
         return self.render()
 
     def post(self, request):
         sql = request.POST.get('sql')
+        connection = request.POST.get('connection')
         show = url_get_show(request)
-        query = Query(sql=sql, title="Playground")
+        query = Query(sql=sql, connection=connection, title="Playground")
         passes_blacklist, failing_words = query.passes_blacklist()
         error = MSG_FAILED_BLACKLIST % ', '.join(failing_words) if not passes_blacklist else None
         run_query = not bool(error) if show else False
         return self.render_with_sql(request, query, run_query=run_query, error=error)
 
     def render(self):
-        return self.render_template('explorer/play.html', {'title': 'Playground'})
+        return self.render_template('explorer/play.html', {
+            'title': 'Playground',
+            'form': QueryForm(initial={'connection': 'default'})
+        })
 
     def render_with_sql(self, request, query, run_query=True, error=None):
         rows = url_get_rows(request)
         fullscreen = url_get_fullscreen(request)
         template = 'fullscreen' if fullscreen else 'play'
-        return self.render_template('explorer/%s.html' % template, query_viewmodel(request.user,
-                                                                                   query,
-                                                                                   title="Playground",
-                                                                                   run_query=run_query,
-                                                                                   error=error,
-                                                                                   rows=rows))
+        return self.render_template(
+            'explorer/%s.html' % template,
+            query_viewmodel(
+                request.user,
+                query,
+                title="Playground",
+                form=QueryForm(initial={'connection': query.connection}),
+                run_query=run_query,
+                error=error,
+                rows=rows
+            )
+        )
 
 
 class QueryView(PermissionRequiredMixin, ExplorerContextMixin, View):

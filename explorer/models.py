@@ -9,6 +9,7 @@ if django.VERSION[1] >= 10:
 else:
     from django.core.urlresolvers import reverse
 from django.conf import settings
+from django.db import transaction
 
 from . import app_settings
 from explorer.utils import (
@@ -29,6 +30,7 @@ logger = logging.getLogger(__name__)
 
 class Query(models.Model):
     title = models.CharField(max_length=255)
+    connection = models.CharField(max_length=255, default="default", help_text="Named database connection defined in Django settings to run SQL against")
     sql = models.TextField()
     description = models.TextField(null=True, blank=True)
     created_by_user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.CASCADE)
@@ -61,7 +63,7 @@ class Query(models.Model):
         return swap_params(self.sql, self.available_params())
 
     def execute_query_only(self):
-        return QueryResult(self.final_sql())
+        return QueryResult(self.final_sql(), connection=self.connection)
 
     def execute_with_logging(self, executing_user):
         ql = self.log(executing_user)
@@ -98,7 +100,7 @@ class Query(models.Model):
     def log(self, user=None):
         if user and user.is_anonymous():
             user = None
-        ql = QueryLog(sql=self.final_sql(), query_id=self.id, run_by_user=user)
+        ql = QueryLog(sql=self.final_sql(), connection=self.connection, query_id=self.id, run_by_user=user)
         ql.save()
         return ql
 
@@ -126,6 +128,7 @@ class SnapShot(object):
 class QueryLog(models.Model):
 
     sql = models.TextField(null=True, blank=True)
+    connection = models.CharField(max_length=255, default="default")
     query = models.ForeignKey(Query, null=True, blank=True, on_delete=models.SET_NULL)
     run_by_user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.CASCADE)
     run_at = models.DateTimeField(auto_now_add=True)
@@ -141,9 +144,10 @@ class QueryLog(models.Model):
 
 class QueryResult(object):
 
-    def __init__(self, sql):
+    def __init__(self, sql, connection=None):
 
         self.sql = sql
+        self.connection = connection or 'default'
 
         cursor, duration = self.execute_query()
 
@@ -172,7 +176,7 @@ class QueryResult(object):
         return [ColumnHeader(d[0]) for d in self._description] if self._description else [ColumnHeader('--')]
 
     def _get_numerics(self):
-        conn = get_connection()
+        conn = get_connection(name=self.connection)
         if hasattr(conn.Database, "NUMBER"):
             return [ix for ix, c in enumerate(self._description) if hasattr(c, 'type_code') and c.type_code in conn.Database.NUMBER.values]
         elif self.data:
@@ -207,13 +211,17 @@ class QueryResult(object):
                     r[ix] = t.format(str(r[ix]))
 
     def execute_query(self):
-        conn = get_connection()
+        conn = get_connection(name=self.connection)
         cursor = conn.cursor()
         start_time = time()
 
+        sid = transaction.savepoint(using=self.connection)
         try:
             cursor.execute(self.sql)
+            transaction.savepoint_commit(sid, using=self.connection)
+
         except DatabaseError as e:
+            transaction.savepoint_rollback(sid, using=self.connection)
             cursor.close()
             raise e
 

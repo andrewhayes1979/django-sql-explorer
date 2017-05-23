@@ -51,6 +51,20 @@
                         <textarea class="form-control" cols="40" id="id_description" name="description" {% if not can_change %}disabled{% endif %} rows="2">{{ form.description.value|default_if_none:"" }}</textarea>
                     </div>
                 </div>
+                {% if form.connection_choices|length <= 1 %}
+                    {{ form.connection }}
+                {% else %}
+                    <div class="form-group">
+                        {% if form.connection.errors %}
+                            <div class="alert alert-danger">{{ form.connection.errors }}</div>
+                        {% endif %}
+                        <label for="id_connection" class="col-sm-2 control-label">Connection</label>
+                        <div class="col-sm-10">
+                            {{ form.connection }}
+                        </div>
+                    </div>
+                {% endif %}
+
                 {% if query %}
                     <div class="form-group">
                         {% if form.created_by_user.errors %}

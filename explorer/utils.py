@@ -19,8 +19,9 @@ def passes_blacklist(sql):
     return not any(fails), fails
 
 
-def get_connection():
-    return connections[app_settings.EXPLORER_CONNECTION_NAME] if app_settings.EXPLORER_CONNECTION_NAME else connection
+def get_connection(name=None):
+    name = name or app_settings.EXPLORER_CONNECTION_NAME
+    return connections[name] if name else connection
 
 
 def _format_field(field):

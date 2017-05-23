@@ -1,24 +1,57 @@
-from django.db import DatabaseError
+from django.db import DatabaseError, connections
 from django.forms import ModelForm, Field, ValidationError, BooleanField
-from django.forms.widgets import CheckboxInput
+from django.forms.widgets import CheckboxInput, HiddenInput, Select
 
 from explorer.models import Query, MSG_FAILED_BLACKLIST
 
 
-class SqlField(Field):
+class QueryForm(ModelForm):
 
-    def validate(self, value):
-        """
-        Ensure that the SQL passes the blacklist and executes. Execution check is skipped if params are present.
+    snapshot = BooleanField(widget=CheckboxInput, required=False)
 
-        :param value: The SQL for this Query model.
-        """
+    def __init__(self, *args, **kwargs):
 
-        query = Query(sql=value)
+        connection_choices = []
+        for connection in connections.all():
+            connection_choices.append((connection.alias, connection.alias))
+
+        # if 'initial' in kwargs:
+        #     kwargs['initial'].update({
+        #         'connection': connection_choices[0][0]
+        #     })
+        # else:
+        #     kwargs['initial'] = {
+        #         'connection': connection_choices[0][0]
+        #     }
+
+        super(QueryForm, self).__init__(*args, **kwargs)
+
+        if len(connection_choices) <= 1:
+            self.fields['connection'].widget = HiddenInput()
+        else:
+            self.fields['connection'].widget = Select(
+                attrs={
+                    'class': 'form-control'
+                },
+                choices=connection_choices
+            )
+
+        self.connection_choices = connection_choices
+
+    def clean(self):
+        if self.instance and self.data.get('created_by_user', None):
+            self.cleaned_data['created_by_user'] = self.instance.created_by_user
+        return super(QueryForm, self).clean()
+
+    def clean_sql(self):
+        sql = self.cleaned_data.get('sql', '')
+        connection = self.cleaned_data.get('connection', 'default')
+        query = Query(sql=sql, connection=connection)
 
         passes_blacklist, failing_words = query.passes_blacklist()
 
-        error = MSG_FAILED_BLACKLIST % ', '.join(failing_words) if not passes_blacklist else None
+        error = MSG_FAILED_BLACKLIST % ', '.join(
+            failing_words) if not passes_blacklist else None
 
         if not error and not query.available_params():
             try:
@@ -32,16 +65,7 @@ class SqlField(Field):
                 code="InvalidSql"
             )
 
-
-class QueryForm(ModelForm):
-
-    sql = SqlField()
-    snapshot = BooleanField(widget=CheckboxInput, required=False)
-
-    def clean(self):
-        if self.instance and self.data.get('created_by_user', None):
-            self.cleaned_data['created_by_user'] = self.instance.created_by_user
-        return super(QueryForm, self).clean()
+        return sql
 
     @property
     def created_by_user_email(self):
@@ -49,4 +73,4 @@ class QueryForm(ModelForm):
 
     class Meta:
         model = Query
-        fields = ['title', 'sql', 'description', 'snapshot']
+        fields = ['title', 'connection', 'sql', 'description', 'snapshot']

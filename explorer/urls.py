@@ -24,6 +24,7 @@ urlpatterns = [
     url(r'new/$', CreateQueryView.as_view(), name='query_create'),
     url(r'play/$', PlayQueryView.as_view(), name='explorer_playground'),
     url(r'schema/$', SchemaView.as_view(), name='explorer_schema'),
+    url(r'schema/(?P<connection>\w+)/$', SchemaView.as_view(), name='explorer_schema_connection'),
     url(r'logs/$', ListQueryLogView.as_view(), name='explorer_logs'),
     url(r'format/$', format_sql, name='format_sql'),
     url(r'^$', ListQueryView.as_view(), name='explorer_index'),
