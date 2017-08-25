@@ -12,7 +12,7 @@
 
 .rows-input {
     text-align: center;
-    width: 40px;
+    width: 50px;
 }
 
 .overflow-wrapper {
@@ -190,6 +190,50 @@ a#fullscreen {
     background-color: transparent;
 }
 
+.navbar-default .navbar-nav>li>a:hover, .navbar-default .navbar-nav>li>a:focus {
+    color: #ddd;
+    background-color: transparent;
+}
+
 a {
     color: #029eee;
+}
+
+a:hover, a:focus {
+    color: #029eee;
+    text-decoration: underline;
+}
+
+.form-control {
+    border: 1px solid #ddd;
+}
+
+.form-control[disabled], .form-control[readonly], fieldset[disabled] .form-control {
+    background-color: #eee;
+    opacity: 1;
+}
+
+.panel-default {
+    border-color: #eee;
+}
+
+.nav-tabs>li>a:hover {
+    border-color: #eee #eee #eee;
+}
+bootstrap.min.css:11
+.nav>li>a:hover, .nav>li>a:focus {
+    text-decoration: none;
+    background-color: #eee;
+}
+
+.btn-default {
+    color: #ffffff;
+    background-color: #464b50;
+    border-color: #464b50;
+}
+
+.btn-default:hover {
+    color: #ffffff;
+    background-color: #595f65;
+    border-color: #595f65;
 }
