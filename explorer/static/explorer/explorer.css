@@ -24,6 +24,10 @@
     padding: 8px;
 }
 
+.search {
+    padding: 8px;
+}
+
 .data-headers {
     background: white;
 }
@@ -260,6 +264,28 @@ bootstrap.min.css:11
     color: #ffffff;
     background-color: #464b50;
     border-color: #464b50;
+}
+
+.btn-default:active, .btn-default.active, .open>.dropdown-toggle.btn-default {
+    color: #ffffff;
+    background-color: #464b50;
+    border-color: #464b50;
+}
+
+.btn-link {
+    color: #029eee;
+    font-weight: normal;
+    border-radius: 0;
+}
+
+.table-hover>tbody>tr:hover {
+    background-color: #eee;
+}
+
+.counter {
+    display: none;
+    background-color: #eee;
+    font-family: monospace;
 }
 
 .dropdown-menu>li>a:hover, .dropdown-menu>li>a:focus {
