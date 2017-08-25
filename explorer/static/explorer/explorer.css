@@ -272,6 +272,12 @@ bootstrap.min.css:11
     border-color: #464b50;
 }
 
+.btn-default:active:hover, .btn-default.active:hover, .open>.dropdown-toggle.btn-default:hover, .btn-default:active:focus, .btn-default.active:focus, .open>.dropdown-toggle.btn-default:focus, .btn-default:active.focus, .btn-default.active.focus, .open>.dropdown-toggle.btn-default.focus {
+    color: #ffffff;
+    background-color: #464b50;
+    border-color: #464b50;
+}
+
 .btn-link {
     color: #029eee;
     font-weight: normal;
